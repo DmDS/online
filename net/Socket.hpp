@@ -40,6 +40,9 @@
 // Enable to dump socket traffic as hex in logs.
 // #define LOG_SOCKET_DATA ENABLE_DEBUG
 
+#define ASSERT_CORRECT_SOCKET_THREAD(socket) \
+    socket->assertCorrectThread(__FILE__, __LINE__);
+
 namespace http
 {
 class Request;
@@ -327,7 +330,7 @@ public:
     const std::thread::id& getThreadOwner() const { return _owner; }
 
     /// Asserts in the debug builds, otherwise just logs.
-    void assertCorrectThread()
+    void assertCorrectThread(const char* fileName, int lineNo)
     {
         if (InhibitThreadChecks)
             return;
@@ -336,7 +339,8 @@ public:
         if (!sameThread)
             LOG_ERR('#' << _fd << " Invoked from foreign thread. Expected: " <<
                     Log::to_string(_owner) << " but called from " <<
-                    std::this_thread::get_id() << " (" << Util::getThreadId() << ").");
+                    std::this_thread::get_id() << " (" << Util::getThreadId() << ")" <<
+                    " (" << fileName << ":" << lineNo << ")");
 
         // assert(sameThread);
     }
@@ -598,7 +602,7 @@ public:
             assert(socket);
 
             LOG_DBG("Removing socket #" << socket->getFD() << " from " << _name);
-            socket->assertCorrectThread();
+            ASSERT_CORRECT_SOCKET_THREAD(socket);
             socket->resetThreadOwner();
 
             _pollSockets.pop_back();
@@ -901,7 +905,7 @@ public:
 
         if (!_closed)
         {
-            assertCorrectThread();
+            ASSERT_CORRECT_SOCKET_THREAD(this);
             _socketHandler->onDisconnect();
             _socketHandler.reset();
         }
@@ -934,7 +938,7 @@ public:
                       int64_t &timeoutMaxMicroS) override
     {
         // cf. SslSocket::getPollEvents
-        assertCorrectThread();
+        ASSERT_CORRECT_SOCKET_THREAD(this);
         int events = _socketHandler->getPollEvents(now, timeoutMaxMicroS);
         if (!_outBuffer.empty() || _shutdownSignalled)
             events |= POLLOUT;
@@ -944,7 +948,7 @@ public:
     /// Send data to the socket peer.
     void send(const char* data, const int len, const bool doFlush = true)
     {
-        assertCorrectThread();
+        ASSERT_CORRECT_SOCKET_THREAD(this);
         if (data != nullptr && len > 0)
         {
             _outBuffer.append(data, len);
@@ -990,7 +994,7 @@ public:
     /// Can be used only with Unix sockets.
     void sendFD(const char* data, const uint64_t len, int fd)
     {
-        assertCorrectThread();
+        ASSERT_CORRECT_SOCKET_THREAD(this);
 
         // Flush existing non-ancillary data
         // so that our non-ancillary data will
@@ -1037,7 +1041,7 @@ public:
     /// Return false iff the socket is closed.
     virtual bool readIncomingData()
     {
-        assertCorrectThread();
+        ASSERT_CORRECT_SOCKET_THREAD(this);
 
 #if !MOBILEAPP
         // SSL decodes blocks of 16Kb, so for efficiency we use the same.
@@ -1213,7 +1217,7 @@ protected:
                     std::chrono::steady_clock::time_point now,
                     const int events) override
     {
-        assertCorrectThread();
+        ASSERT_CORRECT_SOCKET_THREAD(this);
 
         _socketHandler->checkTimeout(now);
 
@@ -1296,7 +1300,7 @@ public:
     /// Override to write data out to socket.
     virtual void writeOutgoingData()
     {
-        assertCorrectThread();
+        ASSERT_CORRECT_SOCKET_THREAD(this);
         assert(!_outBuffer.empty());
         int last_errno = 0;
         do
@@ -1392,7 +1396,7 @@ protected:
     /// Override to handle reading of socket data differently.
     virtual int readData(char* buf, int len)
     {
-        assertCorrectThread();
+        ASSERT_CORRECT_SOCKET_THREAD(this);
 #if !MOBILEAPP
         if (_readType == UseRecvmsgExpectFD)
             return readFD(buf, len, _incomingFD);
@@ -1411,7 +1415,7 @@ protected:
     /// Override to handle writing data to socket differently.
     virtual int writeData(const char* buf, const int len)
     {
-        assertCorrectThread();
+        ASSERT_CORRECT_SOCKET_THREAD(this);
 #if !MOBILEAPP
 #if ENABLE_DEBUG
         if (simulateSocketError(false))
