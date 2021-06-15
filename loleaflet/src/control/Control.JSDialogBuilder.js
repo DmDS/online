@@ -107,6 +107,7 @@ L.Control.JSDialogBuilder = L.Control.extend({
 		this._controlHandlers['spinner'] = this._spinnerControl;
 		this._controlHandlers['spinnerimg'] = this._spinnerImgControl;
 
+		this._controlHandlers['overlay'] = this._overlayControl;
 		this._controlHandlers['mainmenu'] = this._containerHandler;
 		this._controlHandlers['submenu'] = this._subMenuHandler;
 		this._controlHandlers['menuitem'] = this._menuItemHandler;
@@ -2149,6 +2150,13 @@ L.Control.JSDialogBuilder = L.Control.extend({
 		} else {
 			console.warn('Not found menu "' + menuId + '"');
 		}
+
+		return false;
+	},
+
+	_overlayControl: function(parentContainer, data, builder) {
+		var overlay = L.DomUtil.create('div', builder.options.cssClass + ' jsdialog-overlay', parentContainer);
+		overlay.id = data.id;
 
 		return false;
 	},
