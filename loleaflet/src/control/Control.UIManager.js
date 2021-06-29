@@ -75,8 +75,6 @@ L.Control.UIManager = L.Control.extend({
 		this.map.addControl(L.control.infobar());
 		this.map.addControl(L.control.userList());
 
-		var map = this.map;
-
 		var openBusyPopup = function(label) {
 			var json = {
 				id: 'busypopup',
@@ -98,8 +96,8 @@ L.Control.UIManager = L.Control.extend({
 					}
 				]
 			};
-			if (map._socket)
-				map._socket._onMessage({textMsg: 'jsdialog: ' + JSON.stringify(json)});
+			if (app.socket)
+				app.socket._onMessage({textMsg: 'jsdialog: ' + JSON.stringify(json)});
 		};
 
 		var closeBusyPopup = function() {
@@ -108,8 +106,8 @@ L.Control.UIManager = L.Control.extend({
 				jsontype: 'dialog',
 				action: 'close'
 			};
-			if (map._socket)
-				map._socket._onMessage({textMsg: 'jsdialog: ' + JSON.stringify(json)});
+			if (app.socket)
+				app.socket._onMessage({textMsg: 'jsdialog: ' + JSON.stringify(json)});
 		};
 
 		this.map.on('showbusy', function(e) {
@@ -430,6 +428,7 @@ L.Control.UIManager = L.Control.extend({
 	},
 
 	toggleRuler: function() {
+		this.blockUI({message: 'Saving document, please wait...'});
 		if (this.isRulerVisible())
 			this.hideRuler();
 		else
